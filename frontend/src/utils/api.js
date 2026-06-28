@@ -6,12 +6,14 @@
 let mockComplexity = 5;
 let mockFormat = 'prose';
 
-export async function sendChatMessage(message, previousResponseId, gazeEvents, useMockFallback = false) {
+export async function sendChatMessage(message, previousResponseId, gazeEvents, useMockFallback = false, history = [], sessionId = null) {
   const payload = {
     user_id: 'demo_user',
-    message: message,
+    message,
+    session_id: sessionId,
+    history,
     previous_response_id: previousResponseId,
-    gaze_events: gazeEvents
+    gaze_events: gazeEvents,
   };
 
   if (!useMockFallback) {

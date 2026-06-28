@@ -6,9 +6,15 @@ class GazeEvent(BaseModel):
     visits: int
     flag:   Literal['smooth', 'confusion', 'skipped', 'skim']
 
+class HistoryMessage(BaseModel):
+    role:    Literal['user', 'assistant']
+    content: str
+
 class ChatRequest(BaseModel):
     user_id:              str
     message:              str
+    session_id:           str | None = None
+    history:              list[HistoryMessage] = []
     previous_response_id: str | None = None
     gaze_events:          list[GazeEvent] = []
 

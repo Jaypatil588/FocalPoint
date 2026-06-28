@@ -1,5 +1,5 @@
 import React from 'react';
-import { Eye, EyeOff, Check, Target, Sliders, Layers, Server } from 'lucide-react';
+import { Sliders, Layers, Server, Check } from 'lucide-react';
 
 export default function StatsPanel({
   reward,
@@ -21,7 +21,7 @@ export default function StatsPanel({
   };
 
   const getRewardBg = (val) => {
-    if (val === null || val === undefined) return 'rgba(255, 255, 255, 0.05)';
+    if (val === null || val === undefined) return 'rgba(0,0,0,0.03)';
     if (val > 0.5) return 'rgba(16, 185, 129, 0.15)';
     if (val >= 0) return 'rgba(245, 158, 11, 0.15)';
     return 'rgba(239, 68, 68, 0.15)';
@@ -72,7 +72,7 @@ export default function StatsPanel({
               <span>Calibration Progress</span>
               <span>{Math.round(calibrationProgress)}%</span>
             </div>
-            <div style={{ width: '100%', height: '4px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
+            <div style={{ width: '100%', height: '4px', backgroundColor: 'rgba(0,0,0,0.07)', borderRadius: '2px', overflow: 'hidden' }}>
               <div style={{ width: `${calibrationProgress}%`, height: '100%', backgroundColor: 'var(--accent-primary)', transition: 'width 0.2s' }} />
             </div>
           </div>
@@ -129,7 +129,7 @@ export default function StatsPanel({
                 borderRadius: '1px',
                 backgroundColor: i < profile.complexity_score
                   ? i < 3 ? 'var(--danger)' : i < 6 ? 'var(--warning)' : 'var(--success)'
-                  : 'rgba(255,255,255,0.05)',
+                  : 'rgba(0,0,0,0.08)',
                 transition: 'background-color 0.3s ease'
               }} />
             ))}
@@ -142,7 +142,7 @@ export default function StatsPanel({
           <span style={{
             padding: '0.2rem 0.6rem',
             borderRadius: '4px',
-            backgroundColor: 'rgba(255,255,255,0.05)',
+            backgroundColor: 'rgba(0,0,0,0.07)',
             border: '1px solid var(--border-color)',
             fontSize: '0.75rem',
             textTransform: 'uppercase',
@@ -157,32 +157,6 @@ export default function StatsPanel({
 
       {/* Settings / Controls */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem', marginTop: 'auto' }}>
-        {/* Heatmap Toggle */}
-        <button
-          onClick={() => setHeatmapEnabled(!heatmapEnabled)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            background: heatmapEnabled ? 'rgba(139, 92, 246, 0.1)' : 'transparent',
-            border: `1px solid ${heatmapEnabled ? 'var(--accent-primary)' : 'var(--border-color)'}`,
-            padding: '0.6rem 0.8rem',
-            borderRadius: 'var(--border-radius-sm)',
-            cursor: 'pointer',
-            color: 'var(--text-primary)',
-            fontSize: '0.8rem',
-            fontWeight: 500,
-            transition: 'all 0.2s ease',
-            width: '100%'
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            {heatmapEnabled ? <Eye size={14} style={{ color: 'var(--accent-primary)' }} /> : <EyeOff size={14} />}
-            <span>Show Gaze Heatmap</span>
-          </div>
-          {heatmapEnabled && <Check size={12} style={{ color: 'var(--accent-primary)' }} />}
-        </button>
-
         {/* Mock Server Toggle */}
         <button
           onClick={() => setUseMock(!useMock)}
@@ -213,7 +187,7 @@ export default function StatsPanel({
       {/* Telemetry Debug Log */}
       {trackingActive && (
         <div style={{
-          background: 'rgba(0,0,0,0.2)',
+          background: 'rgba(0,0,0,0.03)',
           padding: '0.75rem',
           borderRadius: 'var(--border-radius-sm)',
           border: '1px solid var(--border-color)',
