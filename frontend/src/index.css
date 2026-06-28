@@ -1,140 +1,205 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@300;400;500;600;700&family=Google+Sans+Text:wght@400;500&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {
-  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-  --font-mono: 'Space Grotesk', monospace;
+  /* ── Gemini exact color palette ── */
+  --gemini-bg: #f0f4f9;
+  --gemini-sidebar: #f0f4f9;
+  --gemini-surface: #ffffff;
+  --gemini-surface-hover: #e9eef6;
+  --gemini-border: #c4c7c5;
+  --gemini-border-subtle: rgba(0,0,0,0.06);
 
-  /* Color Palette - Light Mode */
-  --bg-primary: #f8f9fc;
-  --bg-secondary: #f0f2f8;
-  --bg-card: rgba(255, 255, 255, 0.75);
-  --bg-card-hover: rgba(255, 255, 255, 0.92);
+  /* Gemini brand gradient */
+  --gemini-grad-start: #4285f4;
+  --gemini-grad-mid: #9c4df4;
+  --gemini-grad-end: #f66151;
+
+  --gemini-blue: #1a73e8;
+  --gemini-blue-hover: #1967d2;
+  --gemini-input-bg: #ffffff;
+  --gemini-input-border: #c4c7c5;
+
+  /* Text */
+  --text-primary: #1f1f1f;
+  --text-secondary: #444746;
+  --text-muted: #6d7175;
+  --text-link: #1a73e8;
+
+  /* Right panel — dark glass */
+  --rp-bg: #1a1c1e;
+  --rp-surface: #222427;
+  --rp-surface-2: #2a2d31;
+  --rp-border: rgba(255,255,255,0.08);
+  --rp-text: #e3e5e8;
+  --rp-text-dim: rgba(227,229,232,0.55);
+  --rp-accent: #8ab4f8;
+  --rp-accent-glow: rgba(138,180,248,0.15);
+  --rp-green: #34a853;
+  --rp-yellow: #fbbc04;
+  --rp-red: #ea4335;
+
+  /* Legacy vars kept for WebGazerController & StatsPanel */
+  --font-sans: 'Google Sans Text', 'Google Sans', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Space Grotesk', monospace;
+  --bg-primary: #f0f4f9;
+  --bg-secondary: #e9eef6;
+  --bg-card: rgba(255, 255, 255, 0.85);
+  --bg-card-hover: rgba(255, 255, 255, 0.97);
   --border-color: rgba(0, 0, 0, 0.08);
-  --border-glow: rgba(139, 92, 246, 0.25);
-
-  --text-primary: #0f0f1a;
-  --text-secondary: #4b5563;
-  --text-muted: #9ca3af;
-
-  /* Accents */
-  --accent-primary: #7c3aed;
-  --accent-primary-glow: rgba(124, 58, 237, 0.15);
-  --accent-secondary: #0891b2;
-  --accent-secondary-glow: rgba(8, 145, 178, 0.15);
-
-  --success: #059669;
-  --warning: #d97706;
-  --danger: #dc2626;
-
-  /* Layout */
-  --header-height: 70px;
-  --sidebar-width: 360px;
+  --border-glow: rgba(66, 133, 244, 0.2);
+  --accent-primary: #1a73e8;
+  --accent-primary-glow: rgba(26, 115, 232, 0.15);
+  --accent-secondary: #9c4df4;
+  --accent-secondary-glow: rgba(156, 77, 244, 0.15);
+  --success: #34a853;
+  --warning: #fbbc04;
+  --danger: #ea4335;
   --border-radius-lg: 16px;
   --border-radius-md: 12px;
   --border-radius-sm: 8px;
 
   font-family: var(--font-sans);
   color-scheme: light;
-  background-color: var(--bg-primary);
+  background-color: var(--gemini-bg);
   color: var(--text-primary);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
   margin: 0;
   padding: 0;
-  box-sizing: border-box;
-}
-
-*, *::before, *::after {
-  box-sizing: inherit;
-}
-
-body {
-  margin: 0;
-  background: radial-gradient(circle at top right, rgba(139, 92, 246, 0.06), transparent 40%),
-              radial-gradient(circle at bottom left, rgba(6, 182, 212, 0.05), transparent 40%),
-              var(--bg-primary);
-  background-attachment: fixed;
-  min-height: 100vh;
-  overflow-x: hidden;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--gemini-bg);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 #root {
   display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  width: 100%;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
 }
 
-/* Glassmorphism utility */
+/* ── Gemini scrollbar ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.14); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.22); }
+
+/* Right-panel scrollbar (light on dark) */
+.rp-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); }
+.rp-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+/* ── Glassmorphism — legacy ── */
 .glass {
   background: var(--bg-card);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--border-color);
-  box-shadow: 0 4px 24px 0 rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 24px 0 rgba(0,0,0,0.05);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
-
 .glass:hover {
   background: var(--bg-card-hover);
-  border-color: rgba(0, 0, 0, 0.12);
+  border-color: rgba(0,0,0,0.1);
 }
 
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.12);
-  border-radius: 99px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.2);
-}
-
-/* Pulsing red dot for webcam/tracking activity */
+/* ── Animations ── */
 @keyframes pulse-glow {
-  0% {
-    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
-  }
-  70% {
-    box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
-  }
+  0%   { box-shadow: 0 0 0 0 rgba(234,67,53,0.7); }
+  70%  { box-shadow: 0 0 0 10px rgba(234,67,53,0); }
+  100% { box-shadow: 0 0 0 0 rgba(234,67,53,0); }
 }
+.pulse-red { animation: pulse-glow 2s infinite; }
 
-.pulse-red {
-  animation: pulse-glow 2s infinite;
-}
-
-/* Fade in animation */
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in { animation: fadeIn 0.25s cubic-bezier(0.16,1,0.3,1) forwards; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+.animate-spin { animation: spin 1s linear infinite; }
+
+/* Gemini typing dots */
+@keyframes gemini-dot {
+  0%, 60%, 100% { transform: scale(0.55); opacity: 0.35; }
+  30%            { transform: scale(1); opacity: 1; }
 }
 
-.animate-fade-in {
-  animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+/* ── Gemini message markdown base ── */
+.gemini-response p { margin: 0 0 0.45rem; }
+.gemini-response p:last-child { margin-bottom: 0; }
+
+/* ── Input pill focus ring ── */
+.gemini-input-pill:focus-within {
+  border-color: var(--gemini-blue) !important;
+  box-shadow: 0 0 0 2px rgba(26,115,232,0.18);
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
+/* ── Sidebar nav item hover ── */
+.sidebar-item {
+  border-radius: 24px;
+  transition: background 0.15s;
+  cursor: pointer;
+}
+.sidebar-item:hover { background: var(--gemini-surface-hover); }
+.sidebar-item.active { background: #dde3ea; }
+
+/* ── Gemini send button ── */
+.gemini-send {
+  transition: background 0.15s, transform 0.1s;
+}
+.gemini-send:active { transform: scale(0.9); }
+
+/* ── Right panel base ── */
+.right-panel {
+  background: var(--rp-bg);
+  border-left: 1px solid rgba(255,255,255,0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  height: 100vh;
+  overflow: hidden;
 }
 
-.animate-spin {
-  animation: spin 1s linear infinite;
+.rp-window {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-bottom: 1px solid var(--rp-border);
 }
+
+.rp-window:last-child { border-bottom: none; }
+
+.rp-window-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px 6px;
+  background: var(--rp-surface);
+  border-bottom: 1px solid var(--rp-border);
+  flex-shrink: 0;
+}
+
+.rp-title {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--rp-text-dim);
+}
+
+.rp-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── Gaze word highlight target ── */
+.gaze-word { border-radius: 2px; padding: 0 1px; transition: background 0.2s; }
