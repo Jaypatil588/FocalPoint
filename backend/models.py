@@ -23,10 +23,11 @@ class UserProfileOut(BaseModel):
     preferred_format:  str
 
 class ChatResponse(BaseModel):
-    response_id:  str
-    text:         str
-    reward:       float | None
-    user_profile: UserProfileOut
+    response_id:   str
+    text:          str
+    reward:        float | None
+    user_profile:  UserProfileOut
+    system_prompt: str
 
 class SessionEndRequest(BaseModel):
     user_id:    str

@@ -31,7 +31,8 @@ export default function WebGazerController({
   onGazeUpdate,
   trackingActive,
   setTrackingActive,
-  setCalibrationProgress
+  setCalibrationProgress,
+  compact = false,
 }) {
   const webgazer = window.webgazer;
   const [loading, setLoading] = useState(false);
@@ -51,19 +52,18 @@ export default function WebGazerController({
   }, []);
 
   const applyVideoStyles = () => {
+    // Don't set fixed position — RightPanel will move the video element into its slot
+    // Just ensure it's visible temporarily until the move happens
     const interval = setInterval(() => {
       const video = document.getElementById('webgazerVideoFeed');
       if (video) {
-        video.style.borderRadius = 'var(--border-radius-md)';
-        video.style.border = '2px solid var(--accent-primary)';
-        video.style.width = '140px';
-        video.style.height = '105px';
         video.style.position = 'fixed';
-        video.style.bottom = '16px';
-        video.style.right = '16px';
-        video.style.top = 'auto';
-        video.style.zIndex = '9999';
-        video.style.transform = 'scaleX(-1)';
+        video.style.bottom = '-9999px';
+        video.style.right = '-9999px';
+        video.style.width = '1px';
+        video.style.height = '1px';
+        video.style.zIndex = '1';
+        video.style.opacity = '0';
         clearInterval(interval);
       }
     }, 200);
@@ -205,8 +205,68 @@ export default function WebGazerController({
     }
   };
 
-  // Determine which button group to show
   const renderButtons = () => {
+    if (compact) {
+      if (!gazerStarted.current && !cameraStopped) {
+        return (
+          <button
+            onClick={startWebGazer}
+            disabled={loading}
+            className="sidebar-btn"
+            style={{ background: loading ? 'transparent' : 'var(--accent-glow)', color: 'var(--accent)', border: '1px solid var(--accent)', borderRadius: 'var(--radius-pill)', fontSize: '0.8rem' }}
+          >
+            {loading ? <RefreshCw size={13} className="animate-spin" /> : <Camera size={13} />}
+            {loading ? 'Starting…' : 'Calibrate Eye Tracker'}
+          </button>
+        );
+      }
+      if (cameraStopped) {
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <button
+              onClick={resumeTracking}
+              disabled={loading}
+              className="sidebar-btn"
+              style={{ background: 'var(--accent-glow)', color: 'var(--accent)', border: '1px solid var(--accent)', borderRadius: 'var(--radius-pill)', fontSize: '0.8rem' }}
+            >
+              {loading ? <RefreshCw size={13} className="animate-spin" /> : <Camera size={13} />}
+              Resume Tracking
+            </button>
+            <button
+              onClick={handleRecalibrate}
+              disabled={loading}
+              className="sidebar-btn"
+              style={{ fontSize: '0.8rem' }}
+            >
+              <RefreshCw size={13} />
+              Re-Calibrate
+            </button>
+          </div>
+        );
+      }
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <button
+            onClick={stopCamera}
+            className="sidebar-btn"
+            style={{ color: 'var(--danger)', fontSize: '0.8rem' }}
+          >
+            <CameraOff size={13} />
+            Stop Camera
+          </button>
+          <button
+            onClick={openCalibration}
+            className="sidebar-btn"
+            style={{ fontSize: '0.8rem' }}
+          >
+            <RefreshCw size={13} />
+            Re-Calibrate
+          </button>
+        </div>
+      );
+    }
+
+    // Non-compact (original) buttons
     if (!gazerStarted.current && !cameraStopped) {
       // Never started
       return (
@@ -301,6 +361,77 @@ export default function WebGazerController({
       </div>
     );
   };
+
+  if (compact) {
+    return (
+      <>
+        {permissionError && (
+          <div style={{ fontSize: '0.7rem', color: 'var(--danger)', padding: '4px 8px', marginBottom: '4px' }}>
+            {permissionError}
+          </div>
+        )}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          {renderButtons()}
+        </div>
+        {calibrating && (
+          <div style={{
+            position: 'fixed', top: 0, left: 0,
+            width: '100vw', height: '100vh',
+            backgroundColor: 'rgba(5, 5, 10, 0.95)',
+            zIndex: 99999,
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            pointerEvents: 'auto'
+          }}>
+            <div style={{
+              textAlign: 'center', maxWidth: '500px',
+              background: 'var(--bg-app)',
+              border: '1px solid var(--border)',
+              padding: '2rem', borderRadius: 'var(--radius-lg)',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+              marginBottom: '2rem', zIndex: 100000
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}>
+                <Sparkles size={32} style={{ color: 'var(--accent-teal)' }} />
+              </div>
+              <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.25rem', fontWeight: 700 }}>Calibrate Your Gaze</h3>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: '1.5', margin: 0 }}>
+                Look directly at each dot and click it exactly <strong style={{ color: 'var(--accent)' }}>5 times</strong>. Keep your head still.
+              </p>
+            </div>
+            {CALIBRATION_POINTS.map(point => {
+              const clicks = clickCounts[point.id] || 0;
+              const done = clicks >= 5;
+              return (
+                <button
+                  key={point.id}
+                  onClick={() => handlePointClick(point.id)}
+                  disabled={done}
+                  style={{
+                    position: 'absolute',
+                    top: point.top, left: point.left,
+                    transform: 'translate(-50%, -50%)',
+                    width: '32px', height: '32px',
+                    borderRadius: '50%',
+                    backgroundColor: done ? 'var(--success)' : clicks > 0 ? 'var(--warning)' : 'var(--accent)',
+                    border: '3px solid #fff',
+                    boxShadow: done ? '0 0 15px var(--success)' : '0 0 15px var(--accent)',
+                    cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '0.7rem', fontWeight: 'bold', color: '#fff',
+                    transition: 'all 0.2s',
+                    zIndex: 100001
+                  }}
+                >
+                  {clicks}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </>
+    );
+  }
 
   return (
     <>

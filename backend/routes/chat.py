@@ -71,4 +71,5 @@ async def chat(req: ChatRequest):
             complexity_score = user.get("complexity_score", 5),
             preferred_format = user.get("preferred_format", "prose"),
         ),
+        system_prompt = system_prompt,
     )

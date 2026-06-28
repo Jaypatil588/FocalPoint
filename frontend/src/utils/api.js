@@ -88,6 +88,17 @@ export async function sendChatMessage(message, previousResponseId, gazeEvents, u
         responseText += `Feel free to ask follow-up questions. If you read this carefully and smoothly, the complexity will continue to rise or remain stable. If you struggle or skim, it will automatically simplify.`;
       }
 
+      const fmtLine = mockFormat === 'bullets'
+        ? 'Structure your responses with bullet points or numbered lists when presenting multiple ideas.'
+        : 'Use clear, natural prose. You may use paragraph breaks for readability.';
+      const complexityLine = mockComplexity <= 3
+        ? 'Use very simple language and short sentences. Avoid jargon entirely. Explain every term you use.'
+        : mockComplexity <= 5
+          ? 'Use plain, accessible language. Avoid jargon unless necessary — define it when you use it.'
+          : mockComplexity <= 7
+            ? 'You can use moderate technical language. Assume a curious, intelligent non-expert reader.'
+            : 'Feel free to use technical depth and nuance. The user is comfortable with advanced concepts.';
+
       resolve({
         response_id: `resp_${Math.random().toString(36).substr(2, 9)}`,
         text: responseText,
@@ -95,7 +106,15 @@ export async function sendChatMessage(message, previousResponseId, gazeEvents, u
         user_profile: {
           complexity_score: mockComplexity,
           preferred_format: mockFormat
-        }
+        },
+        system_prompt: [
+          'You are a helpful, knowledgeable AI assistant.',
+          'You adapt your communication style based on how the user reads your responses.',
+          'Be direct and complete — answer what was asked fully.',
+          'Match your response length to the question: short questions get concise answers, complex questions get thorough explanations.',
+          fmtLine,
+          complexityLine,
+        ].join('\n'),
       });
     }, 800);
   });
