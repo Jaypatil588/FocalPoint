@@ -49,7 +49,7 @@ export default function App() {
   const [trackingActive, setTrackingActive] = useState(false);
   const [calibrationProgress, setCalibrationProgress] = useState(null);
   const [heatmapEnabled, setHeatmapEnabled] = useState(true);
-  const [currentWordId, setCurrentWordId] = useState(null);
+  const [currentLineId, setCurrentLineId] = useState(null);
   const [gazeTick, setGazeTick] = useState(0);
 
   const activeSessionId = useRef(null);
@@ -125,7 +125,7 @@ export default function App() {
     const zone = getZoneAtGaze(sX, sY);
     if (!zone) {
       fixationState.current = { zone: null, startedAt: 0, lastLoggedAt: 0 };
-      setCurrentWordId(null);
+      setCurrentLineId(null);
       return;
     }
 
@@ -144,14 +144,7 @@ export default function App() {
       if (!zoneLog.current[zone]) zoneLog.current[zone] = [];
       zoneLog.current[zone].push(currentTime);
 
-      if (zone.includes('_w')) {
-        const parentZone = zone.split('_w')[0];
-        if (!zoneLog.current[parentZone]) zoneLog.current[parentZone] = [];
-        zoneLog.current[parentZone].push(currentTime);
-        setCurrentWordId(zone);
-      } else {
-        setCurrentWordId(null);
-      }
+      setCurrentLineId(zone);
 
       fixationState.current.lastLoggedAt = currentTime;
     }
@@ -168,7 +161,7 @@ export default function App() {
     fixationState.current = { zone: null, startedAt: 0, lastLoggedAt: 0 };
     smoothedGaze.current = { x: null, y: null };
     setGazeTick(0);
-    setCurrentWordId(null);
+    setCurrentLineId(null);
     if (gazeDotRef.current) gazeDotRef.current.style.opacity = '0';
   };
 
@@ -556,7 +549,7 @@ export default function App() {
         setCalibrationProgress={setCalibrationProgress}
         calibrationProgress={calibrationProgress}
         messages={messages}
-        currentWordId={currentWordId}
+        currentLineId={currentLineId}
         heatmapEnabled={heatmapEnabled}
         setHeatmapEnabled={setHeatmapEnabled}
         systemPrompt={systemPrompt}

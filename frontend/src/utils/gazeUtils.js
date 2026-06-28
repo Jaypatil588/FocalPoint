@@ -6,15 +6,11 @@
  * Maps screen coordinates (x, y) to the corresponding DOM element's data-zone.
  * @param {number} x - The horizontal gaze coordinate.
  * @param {number} y - The vertical gaze coordinate.
- * @returns {string|null} The zone identifier (e.g., 'zone_0') or null.
+ * @returns {string|null} The line zone identifier (e.g., 'response_id:line_0') or null.
  */
 export function getZoneAtGaze(x, y) {
   const el = document.elementFromPoint(x, y);
   if (el) {
-    const lineEl = el.closest('.gaze-word');
-    if (lineEl) {
-      return lineEl.getAttribute('data-word-id');
-    }
     const zoneEl = el.closest('[data-zone]');
     if (zoneEl) {
       return zoneEl.getAttribute('data-zone');

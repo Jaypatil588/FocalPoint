@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 
-export default function GazeMirror({ messages, currentWordId }) {
+export default function GazeMirror({ messages, currentLineId }) {
   const containerRef = useRef(null);
 
   // Find the last assistant message
@@ -17,7 +17,7 @@ export default function GazeMirror({ messages, currentWordId }) {
     );
   }
 
-  const paragraphs = lastAI.text
+  const lines = lastAI.text
     .split('\n')
     .map(p => p.trim())
     .filter(p => p.length > 0);
@@ -35,31 +35,28 @@ export default function GazeMirror({ messages, currentWordId }) {
         wordBreak: 'break-word',
       }}
     >
-      {paragraphs.map((para, i) => {
-        const isBullet = para.startsWith('•') || para.startsWith('-') || para.startsWith('*') || /^\d+\./.test(para);
-        const cleanText = isBullet ? para.replace(/^[-•*]|\d+\.\s*/, '').trim() : para;
+      {lines.map((line, i) => {
+        const lineId = `${lastAI.responseId}:line_${i}`;
+        const isActive = currentLineId === lineId;
+        const isBullet = line.startsWith('•') || line.startsWith('-') || line.startsWith('*') || /^\d+\./.test(line);
+        const cleanText = isBullet ? line.replace(/^([-•*]\s*|\d+\.\s*)/, '').trim() : line;
 
         return (
-          <p key={i} style={{ margin: '0 0 4px 0', display: 'flex', flexWrap: 'wrap', gap: '1px' }}>
+          <p
+            key={lineId}
+            style={{
+              margin: '0 0 4px 0',
+              display: 'flex',
+              gap: '3px',
+              backgroundColor: isActive ? 'rgba(138,180,248,0.45)' : 'transparent',
+              borderRadius: '3px',
+              padding: '1px 2px',
+              color: isActive ? '#fff' : 'var(--panel-text)',
+              transition: 'background-color 0.15s',
+            }}
+          >
             {isBullet && <span style={{ color: 'var(--panel-accent)', marginRight: '3px', flexShrink: 0 }}>•</span>}
-            {cleanText.split(' ').map((word, w) => {
-              const wordId = `${lastAI.responseId}:zone_${i}_w${w}`;
-              const isActive = currentWordId === wordId;
-              return (
-                <span
-                  key={w}
-                  style={{
-                    backgroundColor: isActive ? 'rgba(138,180,248,0.45)' : 'transparent',
-                    borderRadius: '2px',
-                    padding: '0 1px',
-                    transition: 'background-color 0.15s',
-                    color: isActive ? '#fff' : 'var(--panel-text)',
-                  }}
-                >
-                  {word}{' '}
-                </span>
-              );
-            })}
+            <span>{cleanText}</span>
           </p>
         );
       })}

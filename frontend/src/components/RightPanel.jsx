@@ -12,7 +12,7 @@ export default function RightPanel({
   setCalibrationProgress,
   calibrationProgress,
   messages,
-  currentWordId,
+  currentLineId,
   heatmapEnabled,
   setHeatmapEnabled,
   systemPrompt,
@@ -141,16 +141,16 @@ export default function RightPanel({
         <div className="panel-header">
           <Eye size={10} color="var(--panel-muted)" />
           <span className="panel-title">Gaze Mirror</span>
-          {currentWordId && (
+          {currentLineId && (
             <span className="panel-badge badge-info" style={{ maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {currentWordId}
+              {currentLineId}
             </span>
           )}
         </div>
         <div className="panel-body">
           <GazeMirror
             messages={messages}
-            currentWordId={currentWordId}
+            currentLineId={currentLineId}
             heatmapEnabled={heatmapEnabled}
             gazeTick={gazeTick}
           />

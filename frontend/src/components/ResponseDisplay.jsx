@@ -1,10 +1,77 @@
-import React from 'react';
+import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
+
+function parseTextLines(text) {
+  return text
+    .split('\n')
+    .map(line => line.trim())
+    .filter(Boolean)
+    .map(line => {
+      const isBullet = line.startsWith('•') || line.startsWith('-') || line.startsWith('*') || /^\d+\./.test(line);
+      return {
+        isBullet,
+        text: isBullet ? line.replace(/^([-•*]\s*|\d+\.\s*)/, '').trim() : line,
+      };
+    });
+}
+
+function measureFont(container) {
+  const style = window.getComputedStyle(container);
+  return `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+}
+
+function wrapLine(entry, maxWidth, measure) {
+  const words = entry.text.split(/\s+/).filter(Boolean);
+  if (!words.length || maxWidth <= 0) return [entry];
+
+  const bulletWidth = entry.isBullet ? measure('•  ') : 0;
+  const wrapped = [];
+  let current = '';
+
+  words.forEach(word => {
+    const candidate = current ? `${current} ${word}` : word;
+    const width = measure(candidate) + bulletWidth;
+    if (current && width > maxWidth) {
+      wrapped.push({ isBullet: entry.isBullet && wrapped.length === 0, text: current });
+      current = word;
+    } else {
+      current = candidate;
+    }
+  });
+
+  if (current) wrapped.push({ isBullet: entry.isBullet && wrapped.length === 0, text: current });
+  return wrapped;
+}
+
+function buildMeasuredLines(text, container, containerWidth) {
+  const entries = parseTextLines(text);
+  if (!container) return entries;
+
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d');
+  context.font = measureFont(container);
+
+  const maxWidth = containerWidth - 18;
+  const measure = value => context.measureText(value).width;
+  return entries.flatMap(entry => wrapLine(entry, maxWidth, measure));
+}
 
 export default function ResponseDisplay({ text, responseId, zoneLog, heatmapEnabled }) {
-  const paragraphs = text
-    .split('\n')
-    .map(p => p.trim())
-    .filter(p => p.length > 0);
+  const containerRef = useRef(null);
+  const [containerWidth, setContainerWidth] = useState(0);
+
+  useLayoutEffect(() => {
+    if (!containerRef.current) return undefined;
+    const updateWidth = () => setContainerWidth(containerRef.current?.clientWidth || 0);
+    const observer = new ResizeObserver(updateWidth);
+    observer.observe(containerRef.current);
+    updateWidth();
+    return () => observer.disconnect();
+  }, []);
+
+  const lines = useMemo(
+    () => buildMeasuredLines(text, containerRef.current, containerWidth),
+    [text, containerWidth]
+  );
 
   const getHeatBg = (zone) => {
     if (!heatmapEnabled) return 'transparent';
@@ -15,80 +82,43 @@ export default function ResponseDisplay({ text, responseId, zoneLog, heatmapEnab
     return 'rgba(239, 68, 68, 0.18)';
   };
 
-  const getWordBg = (wordZone) => {
-    if (!heatmapEnabled) return 'transparent';
-    const visits = (zoneLog[wordZone] || []).length;
-    if (visits === 0) return 'transparent';
-    if (visits <= 2) return 'rgba(16, 185, 129, 0.55)';
-    if (visits <= 4) return 'rgba(245, 158, 11, 0.6)';
-    return 'rgba(239, 68, 68, 0.65)';
-  };
-
   const getVisitCount = (zone) => (zoneLog[zone] || []).length;
 
   return (
-    <div id={`response-${responseId}`} style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-      {paragraphs.map((para, i) => {
-        const zoneId = `${responseId}:zone_${i}`;
-        const isBullet = para.startsWith('•') || para.startsWith('-') || para.startsWith('*') || /^\d+\./.test(para);
-        const cleanText = isBullet ? para.replace(/^[-•*]|\d+\.\s*/, '').trim() : para;
+    <div
+      ref={containerRef}
+      id={`response-${responseId}`}
+      style={{ display: 'flex', flexDirection: 'column', gap: '0.18rem' }}
+    >
+      {lines.map((line, i) => {
+        const zoneId = `${responseId}:line_${i}`;
         const visits = getVisitCount(zoneId);
 
         return (
           <div
             key={`${responseId}-${i}`}
             data-zone={zoneId}
+            className="gaze-line"
             style={{
-              padding: '0.4rem 0.5rem',
-              borderRadius: '8px',
               backgroundColor: getHeatBg(zoneId),
-              transition: 'background-color 0.3s ease',
-              lineHeight: '1.65',
-              fontSize: '1.125rem',
-              position: 'relative',
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: '0.5rem',
-              color: 'var(--text-primary)',
             }}
           >
-            {isBullet && (
-              <span style={{ color: 'var(--accent-primary)', fontWeight: 'bold', fontSize: '1rem', lineHeight: '1.65', flexShrink: 0, marginTop: '1px' }}>•</span>
+            {line.isBullet && (
+              <span className="gaze-line-bullet">•</span>
             )}
-            <span>
-              {cleanText.split(' ').map((word, w) => (
-                <span
-                  key={w}
-                  className="gaze-word"
-                  data-word-id={`${zoneId}_w${w}`}
-                  style={{
-                    backgroundColor: getWordBg(`${zoneId}_w${w}`),
-                    borderRadius: '3px',
-                    padding: '0 1px',
-                    transition: 'background-color 0.2s',
-                  }}
-                >
-                  {word}{' '}
-                </span>
-              ))}
-            </span>
+            <span>{line.text}</span>
 
-            {/* Visit count badge */}
             {heatmapEnabled && visits > 0 && (
-              <span style={{
-                position: 'absolute',
-                top: '-5px',
-                right: '8px',
-                fontSize: '0.6rem',
-                backgroundColor: visits <= 2 ? 'rgba(16,185,129,0.8)' : visits <= 4 ? 'rgba(245,158,11,0.8)' : 'rgba(239,68,68,0.8)',
-                color: '#fff',
-                padding: '1px 5px',
-                borderRadius: '99px',
-                fontFamily: 'monospace',
-                fontWeight: 'bold',
-                pointerEvents: 'none',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
-              }}>
+              <span
+                className="gaze-line-visits"
+                style={{
+                  backgroundColor: visits <= 2
+                    ? 'rgba(16,185,129,0.8)'
+                    : visits <= 4
+                      ? 'rgba(245,158,11,0.8)'
+                      : 'rgba(239,68,68,0.8)',
+                }}
+              >
                 {visits}
               </span>
             )}
