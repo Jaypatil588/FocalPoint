@@ -91,7 +91,7 @@ those tests do not establish provider availability or answer quality.
 | LIVE-03 | Six complete API snapshots unchanged after process restart; browser reopened persisted Groq trace: PASS. |
 | LIVE-04 | Human explanation comparison and physical tracking observations: NOT RUN. No measured comprehension benefit claimed. |
 | SHIP-01 | Diff, secret/ignored-file audit and current docs reviewed; excluded MCP/multi-agent/sandbox features not added. |
-| SHIP-02 | Delivery commit and remote verification recorded after push below. |
+| SHIP-02 | Implementation commit pushed to origin/main; remote SHA matched local HEAD and intended worktree was clean. See delivery record below. |
 
 ## Real provider evidence
 
@@ -138,8 +138,11 @@ without restarting the backend, which the live script also checks.
 
 ## Delivery
 
-Push verification is pending at the time of this initial record. The delivery
-entry will be updated with the actual commit and remote comparison after push.
+Implementation commit: `771079a4b0fc66066f415dd00c255315ecae0183`.
+Pushed to `https://github.com/Jaypatil588/FocalPoint.git`, branch `main`.
+`git ls-remote origin refs/heads/main` returned that exact SHA, matching
+`git rev-parse HEAD`; `git status --porcelain` was empty. This documentation-only
+follow-up records the observed delivery check without changing tested code.
 
 ## Unresolved acceptance
 
