@@ -1,108 +1,38 @@
-from datetime import datetime, timezone
-from fastapi import APIRouter, HTTPException, Query
-from models import SaveProfileRequest, SaveSessionRequest, SessionEndRequest, UserProfileOut
+from fastapi import APIRouter, HTTPException
+from models import SaveProfileRequest, SessionEndRequest
 from db.mongo import get_db
-from db.users import get_user, update_user
-from db.episodes import get_session_episodes
-from db.sessions import close_session
-from services.meta_agent import run_meta_agent
+from db.users import get_user
+from services.improvement import ImprovementService
 
 router = APIRouter()
 
-@router.get("/profile", response_model=UserProfileOut)
-async def get_profile(user_id: str = Query(...)):
-    user = get_user(user_id)
-    return UserProfileOut(
-        complexity_score=user.get("complexity_score", 5),
-        preferred_format=user.get("preferred_format", "prose"),
-    )
 
-@router.post("/profile", response_model=UserProfileOut)
-async def save_profile(req: SaveProfileRequest):
-    allowed = {"complexity_score", "preferred_format"}
-    updates = {key: value for key, value in req.profile.items() if key in allowed}
-    if not updates:
-        raise HTTPException(status_code=400, detail="profile must include complexity_score or preferred_format")
-    update_user(req.user_id, updates)
-    user = get_user(req.user_id)
-    return UserProfileOut(
-        complexity_score=user.get("complexity_score", 5),
-        preferred_format=user.get("preferred_format", "prose"),
-    )
+@router.get("/profile")
+def profile(user_id: str):
+    user = get_user(user_id)
+    return {key: user[key] for key in ("complexity_score", "preferred_format")}
+
+
+@router.post("/profile")
+def save_profile(request: SaveProfileRequest):
+    get_user(request.user_id)
+    get_db().users.update_one({"_id": request.user_id}, {"$set": request.profile.model_dump(), "$inc": {"revision": 1}})
+    return request.profile
+
 
 @router.get("/sessions")
-async def list_sessions(user_id: str = Query(...)):
-    db = get_db()
-    return list(
-        db.sessions
-        .find(
-            {"user_id": user_id, "messages": {"$exists": True}},
-            {"_id": 0, "id": 1, "title": 1, "messages": 1, "created_at": 1, "updated_at": 1},
-        )
-        .sort("updated_at", -1)
-        .limit(20)
-    )
+def sessions(user_id: str):
+    return list(get_db().sessions.find({"user_id": user_id}, {"_id": 0}).sort("updated_at", -1).limit(20))
 
-@router.post("/sessions")
-async def save_session(req: SaveSessionRequest):
-    session_id = req.session.get("id")
-    title = req.session.get("title")
-    messages = req.session.get("messages")
-    if not session_id or not title or not isinstance(messages, list):
-        raise HTTPException(status_code=400, detail="session must include id, title, and messages")
-
-    now = datetime.now(timezone.utc).isoformat()
-    db = get_db()
-    db.sessions.update_one(
-        {"_id": session_id, "user_id": req.user_id},
-        {
-            "$set": {
-                "id": session_id,
-                "title": title,
-                "messages": messages,
-                "updated_at": now,
-            },
-            "$setOnInsert": {
-                "_id": session_id,
-                "user_id": req.user_id,
-                "created_at": now,
-                "started_at": now,
-                "ended_at": None,
-                "turns": 0,
-                "avg_reward": None,
-                "meta_agent_run": False,
-                "meta_insights": [],
-            },
-        },
-        upsert=True,
-    )
-    return {"id": session_id}
 
 @router.delete("/sessions/{session_id}")
-async def delete_session(session_id: str, user_id: str = Query(...)):
-    db = get_db()
-    result = db.sessions.delete_one({"_id": session_id, "user_id": user_id})
+def delete_session(session_id: str, user_id: str):
+    result = get_db().sessions.delete_one({"_id": session_id, "user_id": user_id})
     if result.deleted_count != 1:
-        raise HTTPException(status_code=404, detail=f"session not found: {session_id}")
+        raise HTTPException(404, "session not found")
     return {"id": session_id, "deleted": True}
 
+
 @router.post("/session/end")
-async def end_session(req: SessionEndRequest):
-    user     = get_user(req.user_id)
-    episodes = get_session_episodes(req.session_id)
-
-    avg_reward = None
-    if episodes:
-        rewards    = [e["reward"] for e in episodes if e.get("reward") is not None]
-        avg_reward = round(sum(rewards) / len(rewards), 2) if rewards else None
-
-    # RSI: meta-agent analyzes session and upgrades user profile
-    insights = run_meta_agent(req.user_id, req.session_id, user)
-    close_session(req.session_id, avg_reward, insights)
-
-    return {
-        "session_id":  req.session_id,
-        "avg_reward":  avg_reward,
-        "insights":    insights,
-        "turns":       len(episodes),
-    }
+def improve(request: SessionEndRequest):
+    return ImprovementService().run(request)

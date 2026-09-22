@@ -381,17 +381,20 @@ export default function IrisTrackerController({
       running.current = true;
       frameRef.current = requestAnimationFrame(runFrameLoop);
       setCameraStopped(false);
+      return true;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       setPermissionError(message);
       setTrackingActive(false);
+      return false;
     } finally {
       setLoading(false);
     }
   };
 
   const startCalibration = async () => {
-    await startCamera();
+    const started = await startCamera();
+    if (!started) return;
     calibrationSamples.current = [];
     featureHistory.current = [];
     latestFeatures.current = null;
@@ -412,9 +415,15 @@ export default function IrisTrackerController({
       setPermissionError('No saved MediaPipe calibration model. Calibrate first.');
       return;
     }
-    latestModel.current = parseSavedModel(savedModel);
+    try {
+      latestModel.current = parseSavedModel(savedModel);
+    } catch (err) {
+      setPermissionError(err instanceof Error ? err.message : String(err));
+      return;
+    }
     pointFilter.current = makeOneEuroFilter();
-    await startCamera();
+    const started = await startCamera();
+    if (!started) return;
     setTrackingActive(true);
     setCalibrationProgress(null);
   };
@@ -488,7 +497,7 @@ export default function IrisTrackerController({
   };
 
   const renderButtons = () => {
-    if (!running.current && !cameraStopped) {
+    if (!running.current && (!cameraStopped || !latestModel.current)) {
       return (
         <button onClick={startCalibration} disabled={loading} className="sidebar-btn" style={{ background: loading ? 'transparent' : 'var(--accent-glow)', color: 'var(--accent)', border: '1px solid var(--accent)', borderRadius: 'var(--radius-pill)', fontSize: '0.8rem' }}>
           {loading ? <RefreshCw size={13} className="animate-spin" /> : <Camera size={13} />}

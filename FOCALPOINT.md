@@ -1,4 +1,8 @@
 # FocalPoint — Project Master Doc
+
+> Historical planning document, not the current implementation contract. See
+> [README](README.md), [current design](docs/IMPLEMENTATION_DESIGN.md), and
+> [verification results](docs/VERIFICATION.md) for implemented behavior and limits.
 > AIEWF 2026 Hackathon · Shack15, SF · June 27–28
 > Submission deadline: June 28, 12:00PM
 

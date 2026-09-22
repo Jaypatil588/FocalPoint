@@ -27,7 +27,8 @@ export function getZoneAtGaze(x, y) {
  * @param {Object} zoneLog - Stable fixation timestamps per zone.
  * @returns {Array<{zone: string, visits: number, flag: string}>}
  */
-export function computeGazeEvents(allZones, zoneLog) {
+export function computeGazeEvents(allZones, zoneLog, trackingActive = true) {
+  if (!trackingActive || !allZones.some(zone => (zoneLog[zone] || []).length > 0)) return [];
   return allZones.map(zone => {
     const timestamps = zoneLog[zone] || [];
     const visits = timestamps.length;

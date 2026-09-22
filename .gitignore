@@ -5,3 +5,9 @@ node_modules/
 *.pyc
 dist/
 .venv/
+.runtime/
+test-results/
+playwright-report/
+.pytest_cache/
+.coverage
+htmlcov/

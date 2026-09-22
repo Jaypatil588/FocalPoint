@@ -1,11 +1,4 @@
-from models import GazeEvent
-
-FLAG_SCORES = {
-    "smooth":    1.0,
-    "skim":     -0.3,
-    "confusion": -0.5,
-    "skipped":  -0.2,
-}
+from models import AdaptationPolicy, GazeEvent
 
 _STOP = {
     'the','a','an','is','it','in','on','at','to','for','of','and','or','but',
@@ -23,22 +16,34 @@ def _extract_topic(message: str) -> str | None:
             return clean
     return None
 
-def compute_reward(gaze_events: list[GazeEvent]) -> float | None:
+def extract_topic(message: str) -> str | None:
+    return _extract_topic(message)
+
+
+def compute_reward(
+    gaze_events: list[GazeEvent], policy: AdaptationPolicy
+) -> float | None:
     if not gaze_events:
         return None
 
-    total = sum(FLAG_SCORES.get(e.flag, 0) for e in gaze_events)
+    total = sum(policy.reward.flag_scores[e.flag] for e in gaze_events)
     reward = total / len(gaze_events)
     return round(max(-1.0, min(1.0, reward)), 2)
 
 def update_profile_from_reward(
-    profile: dict, reward: float, gaze_events: list[GazeEvent], message: str = ""
+    profile: dict,
+    reward: float,
+    gaze_events: list[GazeEvent],
+    policy: AdaptationPolicy,
+    message: str = "",
 ) -> dict:
     updates = {}
     score = profile.get("complexity_score", 5)
 
     if reward < 0:
-        updates["complexity_score"] = max(1, score - 1)
+        updates["complexity_score"] = max(
+            1, score + policy.profile_update.negative_complexity_delta
+        )
         updates["preferred_format"] = "bullets"
         # Surface the topic that caused confusion so the prompt can address it
         if message:
@@ -46,9 +51,12 @@ def update_profile_from_reward(
             if topic:
                 existing = profile.get("topics_to_simplify", [])
                 if topic not in existing:
-                    updates["topics_to_simplify"] = (existing + [topic])[-5:]
+                    limit = policy.profile_update.max_topics_to_simplify
+                    updates["topics_to_simplify"] = (existing + [topic])[-limit:]
     elif reward > 0:
-        updates["complexity_score"] = min(10, score + 1)
+        updates["complexity_score"] = min(
+            10, score + policy.profile_update.positive_complexity_delta
+        )
         if score >= 6:
             updates["preferred_format"] = "prose"
 
@@ -64,6 +72,7 @@ def update_profile_from_reward(
     if read_zones:
         estimated = len(read_zones) * 30  # ~30 words per paragraph zone
         current   = profile.get("avg_words_read", 200)
-        updates["avg_words_read"] = round(current * 0.7 + estimated * 0.3)
+        alpha = policy.profile_update.reading_length_ema_alpha
+        updates["avg_words_read"] = round(current * (1 - alpha) + estimated * alpha)
 
     return updates

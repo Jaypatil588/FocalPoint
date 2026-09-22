@@ -1,15 +1,17 @@
-def build_system_prompt(profile: dict) -> str:
+from models import AdaptationPolicy, MemoryReference
+
+
+def build_system_prompt(
+    profile: dict,
+    policy: AdaptationPolicy,
+    memories: list[MemoryReference] | None = None,
+) -> str:
     score  = profile.get("complexity_score", 5)
     fmt    = profile.get("preferred_format", "prose")
     topics = profile.get("topics_to_simplify", [])
     flags  = profile.get("prospective_flags", [])
 
-    parts = [
-        "You are a helpful, knowledgeable AI assistant.",
-        "You adapt your communication style based on how the user reads your responses.",
-        "Be direct and complete — answer what was asked fully.",
-        "Match your response length to the question: short questions get concise answers, complex questions get thorough explanations.",
-    ]
+    parts = [*policy.prompt.base_instructions, *policy.prompt.adaptive_instructions]
 
     # Format
     if fmt == "bullets":
@@ -37,5 +39,9 @@ def build_system_prompt(profile: dict) -> str:
     if action_flags:
         flagged = ", ".join(f["topic"] for f in action_flags)
         parts.append(f"For {flagged}: lead with a real-world analogy before any technical explanation.")
+
+    if memories:
+        parts.append("Apply these evidence-backed user preferences when relevant:")
+        parts.extend(f"- {memory.content}" for memory in memories)
 
     return "\n".join(parts)

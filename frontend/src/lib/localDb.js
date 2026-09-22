@@ -6,16 +6,6 @@ export async function loadSessionsFromDB() {
   return apiRequest(`/sessions?user_id=${encodeURIComponent(USER_ID)}`);
 }
 
-export async function saveSessionToDB(session) {
-  return apiRequest('/sessions', {
-    method: 'POST',
-    body: JSON.stringify({
-      user_id: USER_ID,
-      session,
-    }),
-  });
-}
-
 export async function deleteSessionFromDB(sessionId) {
   return apiRequest(`/sessions/${encodeURIComponent(sessionId)}?user_id=${encodeURIComponent(USER_ID)}`, {
     method: 'DELETE',

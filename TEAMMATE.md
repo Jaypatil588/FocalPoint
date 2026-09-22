@@ -1,4 +1,7 @@
 # FocalPoint — Eye-Tracking Frontend
+
+> Historical integration notes. The current server-owned context and API contract
+> are documented in [README](README.md) and [the design](docs/IMPLEMENTATION_DESIGN.md).
 ### Your job, your files, your integration contract
 
 ---

@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 async function parseJsonResponse(response, context) {
   const body = await response.text();
@@ -32,16 +32,24 @@ export async function apiRequest(path, options = {}) {
   return parseJsonResponse(response, path);
 }
 
-export async function sendChatMessage(message, previousResponseId, gazeEvents, history = [], sessionId = null) {
+export async function sendChatMessage(message, previousResponseId, gazeEvents, sessionId) {
   return apiRequest('/chat', {
     method: 'POST',
     body: JSON.stringify({
       user_id: 'demo_user',
       message,
       session_id: sessionId,
-      history,
+      request_id: crypto.randomUUID(),
       previous_response_id: previousResponseId,
       gaze_events: gazeEvents,
     }),
+  });
+}
+
+export async function improveSession(sessionId, previousResponseId, gazeEvents) {
+  return apiRequest('/session/end', {
+    method: 'POST',
+    body: JSON.stringify({ user_id: 'demo_user', session_id: sessionId,
+      request_id: crypto.randomUUID(), previous_response_id: previousResponseId, gaze_events: gazeEvents }),
   });
 }

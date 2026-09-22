@@ -1,12 +1,12 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Eye, RefreshCw, SquarePen as PenSquare, Menu, X, MessageSquare } from 'lucide-react';
+import { Send, Eye, RefreshCw, SquarePen as PenSquare, Menu, X, MessageSquare, Activity } from 'lucide-react';
+import Inspector from './components/Inspector';
 import ResponseDisplay from './components/ResponseDisplay';
 import RightPanel from './components/RightPanel';
 import { getZoneAtGaze, computeGazeEvents } from './utils/gazeUtils';
-import { sendChatMessage } from './utils/api';
+import { sendChatMessage, improveSession } from './utils/api';
 import {
-  loadSessionsFromDB, saveSessionToDB, loadProfileFromDB,
-  saveProfileToDB, deleteSessionFromDB,
+  loadSessionsFromDB, loadProfileFromDB, deleteSessionFromDB,
 } from './lib/localDb';
 
 const INIT_MSG = {
@@ -35,7 +35,10 @@ function median(values) {
 }
 
 export default function App() {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 1100);
+  const [inspectorOpen, setInspectorOpen] = useState(false);
+  const [lastTrace, setLastTrace] = useState(null);
+  const closeInspector = useCallback(() => setInspectorOpen(false), []);
   const [messages, setMessages] = useState([INIT_MSG]);
   const [sessions, setSessions] = useState([]);
   const [input, setInput] = useState('');
@@ -172,26 +175,20 @@ export default function App() {
   }, []);
 
   const startNewChat = async () => {
-    const realMessages = messages.filter(m => m.responseId !== 'init');
-    if (activeSessionId.current === null && realMessages.length > 0) {
-      const firstUser = realMessages.find(m => m.role === 'user');
-      const title = firstUser
-        ? firstUser.text.slice(0, 40) + (firstUser.text.length > 40 ? '…' : '')
-        : 'Chat';
-      const session = { id: sessionId.current, title, messages };
-      setSessions(prev => [session, ...prev].slice(0, 20));
-      await saveSessionToDB(session);
-    }
+    if (loading) return;
     activeSessionId.current = null;
     sessionId.current = genId();
     setMessages([INIT_MSG]);
     setLastResponseId(null);
     setLastReward(null);
     setSystemPrompt('');
+    setBackendError(null);
+    setLastTrace(null);
     resetZoneLog();
   };
 
   const loadSession = (session) => {
+    if (loading) return;
     activeSessionId.current = session.id;
     sessionId.current = session.id;
     setMessages(session.messages);
@@ -199,17 +196,41 @@ export default function App() {
       m => m.role === 'assistant' && m.responseId !== 'init'
     );
     setLastResponseId(lastAssistant?.responseId || null);
+    setSystemPrompt(lastAssistant?.system_prompt || '');
+    setLastReward(null);
+    setLastTrace(null);
+    setBackendError(null);
     resetZoneLog();
   };
 
   const deleteSession = async (e, sessionId_) => {
     e.stopPropagation();
-    setSessions(prev => prev.filter(s => s.id !== sessionId_));
-    await deleteSessionFromDB(sessionId_);
-    if (activeSessionId.current === sessionId_) {
-      activeSessionId.current = null;
-      sessionId.current = genId();
-      setMessages([INIT_MSG]);
+    if (loading) return;
+    try {
+      await deleteSessionFromDB(sessionId_);
+      setSessions(prev => prev.filter(s => s.id !== sessionId_));
+      if (sessionId.current === sessionId_) await startNewChat();
+    } catch (error) {
+      setBackendError(error.message);
+    }
+  };
+
+  const collectFeedback = () => {
+    const element = lastResponseId ? document.getElementById(`response-${lastResponseId}`) : null;
+    const zones = Array.from(element?.querySelectorAll('[data-zone]') || []).map(el => el.getAttribute('data-zone'));
+    return computeGazeEvents(zones, zoneLog.current, trackingActive);
+  };
+
+  const handleImprove = async () => {
+    setLoading(true);
+    try {
+      const result = await improveSession(sessionId.current, lastResponseId, collectFeedback());
+      resetZoneLog();
+      setLastTrace(result.trace);
+      setUserProfile(await loadProfileFromDB());
+      return result;
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -221,27 +242,17 @@ export default function App() {
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
     setLoading(true);
 
-    const previousResponseEl = lastResponseId
-      ? document.getElementById(`response-${lastResponseId}`)
-      : null;
-    const currentZones = Array.from(previousResponseEl?.querySelectorAll('[data-zone]') || [])
-      .map(el => el.getAttribute('data-zone'));
-    const gazeEvents = computeGazeEvents(currentZones, zoneLog.current);
+    const gazeEvents = collectFeedback();
 
     activeSessionId.current = null;
     const newUserMsg = { role: 'user', text };
     setMessages(prev => [...prev, newUserMsg]);
-    resetZoneLog();
 
     try {
-      const history = messages
-        .filter(m => m.responseId !== 'init')
-        .map(m => ({ role: m.role, content: m.text }));
-
       const data = await sendChatMessage(
-        text, lastResponseId, gazeEvents, history, sessionId.current
+        text, lastResponseId, gazeEvents, sessionId.current
       );
-      const assistantMsg = { role: 'assistant', text: data.text, responseId: data.response_id };
+      const assistantMsg = { role: 'assistant', text: data.text, responseId: data.response_id, system_prompt: data.system_prompt };
       const updatedMessages = [...messages, newUserMsg, assistantMsg];
       setLastResponseId(data.response_id);
       setUserProfile(data.user_profile);
@@ -249,19 +260,14 @@ export default function App() {
       setSystemPrompt(data.system_prompt || '');
       setBackendError(null);
       setMessages(updatedMessages);
-
-      // Persist updated profile
-      await saveProfileToDB({
-        complexity_score: data.user_profile.complexity_score,
-        preferred_format: data.user_profile.preferred_format,
-      });
+      setLastTrace(data.trace);
+      resetZoneLog();
 
       const firstUser = updatedMessages.find(m => m.role === 'user');
       const title = firstUser
         ? firstUser.text.slice(0, 40) + (firstUser.text.length > 40 ? '…' : '')
         : 'Chat';
       const session = { id: sessionId.current, title, messages: updatedMessages };
-      await saveSessionToDB(session);
       setSessions(prev => {
         const withoutCurrent = prev.filter(s => s.id !== session.id);
         return [session, ...withoutCurrent].slice(0, 20);
@@ -270,10 +276,8 @@ export default function App() {
       console.error(err);
       const message = err instanceof Error ? err.message : String(err);
       setBackendError(`Backend error: ${message}`);
-      setMessages(prev => [
-        ...prev,
-        { role: 'assistant', text: `Backend error: ${message}`, responseId: `error_${Date.now()}` },
-      ]);
+      setMessages(messages);
+      setInput(text);
     } finally {
       setLoading(false);
     }
@@ -400,6 +404,9 @@ export default function App() {
             {isEmptyState ? 'FocalPoint' : sessions.find(s => s.id === activeSessionId.current)?.title || 'FocalPoint'}
           </span>
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button className="icon-btn" title="Inspect runs and policies" aria-label="Inspect runs and policies" onClick={() => setInspectorOpen(true)}>
+              <Activity size={20} />
+            </button>
             {backendError && (
               <span style={{
                 fontSize: '0.72rem', fontWeight: 600, padding: '3px 10px', borderRadius: '99px',
@@ -541,6 +548,8 @@ export default function App() {
       </div>
 
       {/* ── RIGHT PANEL ── */}
+      {inspectorOpen && <Inspector sessionId={sessionId.current} lastTrace={lastTrace} busy={loading}
+        onImprove={handleImprove} onClose={closeInspector} />}
       <RightPanel
         trackingActive={trackingActive}
         setTrackingActive={setTrackingActive}
